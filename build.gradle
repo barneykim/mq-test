@@ -1,0 +1,118 @@
+
+ext {
+	springVersion = '3.1.1.RELEASE'
+	springAmqpVersion = '1.1.1.RELEASE'
+}
+
+allprojects {
+	repositories {
+		mavenCentral()
+	}
+}
+
+subprojects {
+
+	apply plugin: 'java'
+	apply plugin: 'eclipse'
+
+	// java 소스 버전
+	sourceCompatibility = 1.6
+
+	// 빌드 디렉토리 지정
+	// 기본은 build, eclipse에서는 bin
+	buildDir = 'target'
+
+	sourceSets {
+		main {
+			java {
+				srcDir 'src/main/java'
+			}
+			resources {
+				srcDir 'src/main/resources'
+			}
+		}
+		test {
+			java {
+				srcDir 'src/test/java'
+			}
+			resources {
+				srcDir 'src/test/resoures'
+			}
+		}
+	}
+
+	configurations {
+		provided
+		someBoringConfig
+	}
+
+	tasks.eclipse.dependsOn cleanEclipse
+
+	// http://gradle.org/docs/current/dsl/org.gradle.plugins.ide.eclipse.model.EclipseClasspath.html
+	eclipse {
+		classpath {
+			//you can tweak the classpath of the eclipse project by adding extra configurations:
+			plusConfigurations += configurations.provided
+
+			//you can also remove configurations from the classpath:
+			minusConfigurations += configurations.someBoringConfig
+
+			//if you don't want some classpath entries 'exported' in eclipse
+			noExportConfigurations += configurations.provided
+
+			defaultOutputDir = file("${buildDir}/classes")
+			downloadSources = true
+			downloadJavadoc = false
+		}
+	}
+
+	dependencies {
+		compile (
+			"junit:junit-dep:4.10",
+			"org.projectlombok:lombok:0.11.4",
+			"org.slf4j:slf4j-api:1.6.4",
+			"org.slf4j:slf4j-log4j12:1.6.4",
+			"org.slf4j:jcl-over-slf4j:1.6.4",
+			"com.google.guava:guava:13.0.1"
+		)
+		compile (
+			"org.springframework.amqp:spring-amqp:${springAmqpVersion}",
+			"org.springframework.amqp:spring-rabbit:${springAmqpVersion}"
+		)
+		compile ("org.springframework:spring-core:${springVersion}") {
+			exclude group: "commons-logging", module: "commons-logging"
+		}
+		compile (
+			"org.springframework:spring-context:${springVersion}",
+			"org.springframework:spring-tx:${springVersion}"
+		)
+		compile (
+			"cglib:cglib-nodep:2.2"
+		)
+		testCompile (
+			"org.hamcrest:hamcrest-all:1.1",
+			"org.mockito:mockito-all:1.9.0"
+		)
+		testCompile (
+			"org.springframework:spring-test:${springVersion}"
+		)
+	}
+}
+
+configure(subprojects.findAll { it.name.endsWith('-app') }) {
+	dependencies {
+		compile project(':mq-test-core')
+		apply plugin: 'application'
+	}
+
+	//
+	// gradle :mq-producer-app:run -Pargs="tester 1"
+	// gradle :mq-consumer-app:run
+	//
+	run {
+		// gradle run -Pargs="arg1 arg2"
+		if ( project.hasProperty('args') ) {
+			args project.args.split('\\s+')
+		}
+	}
+}

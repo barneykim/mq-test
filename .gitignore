@@ -1,0 +1,8 @@
+target
+bin
+.gradle
+.classpath
+.project
+.settings
+.springBeans
+*.swp
